@@ -110,6 +110,18 @@ class UrlTests(unittest.TestCase):
         exp = 'http://mycdnname.cloudfront.net/static/bah.js'
         self.assertEquals(self.client_get(ufs).data, exp)
 
+    def test_directory_url_for_timestamp(self):
+        """ Tests CDN_TIMESTAMP correctly affects generated URLs. """
+        ufs = "{{ url_for('static', filename='dir') }}"
+
+        self.app.config['CDN_TIMESTAMP'] = True
+        exp = 'http://mycdnname.cloudfront.net/static/dir'
+        self.assertEquals(self.client_get(ufs).data, exp)
+
+        self.app.config['CDN_TIMESTAMP'] = False
+        exp = 'http://mycdnname.cloudfront.net/static/dir'
+        self.assertEquals(self.client_get(ufs).data, exp)
+
 
 if __name__ == '__main__':
     unittest.main()
