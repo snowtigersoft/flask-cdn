@@ -37,7 +37,8 @@ def url_for(endpoint, **values):
 
         if app.config['CDN_TIMESTAMP']:
             path = os.path.join(static_folder, values['filename'])
-            values['t'] = int(os.path.getmtime(path))
+            if not os.path.isdir(path):
+                values['t'] = int(os.path.getmtime(path))
 
         return urls.build(endpoint, values=values, force_external=True)
 
