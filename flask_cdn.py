@@ -19,18 +19,32 @@ def url_for(endpoint, **values):
     """
     app = current_app
 
-    if app.debug and not app.config['CDN_DEBUG']:
+    if app.config['CDN_DEBUG']:
         return flask_url_for(endpoint, **values)
 
-    if endpoint == 'static' or endpoint.endswith('.static'):
-        cdn_https = app.config['CDN_HTTPS']
+    def endpoint_match(endpoint):
+        if endpoint in app.config['CDN_ENDPOINTS']:
+            return True
 
-        scheme = 'http'
-        if cdn_https is True or (cdn_https is None and request.is_secure):
-            scheme = 'https'
+        for x in app.config['CDN_ENDPOINTS']:
+            if endpoint.endswith('.%s' % x):
+                return True
+
+        return False
+
+    if endpoint_match(endpoint):
+        try:
+            scheme = values.pop('_scheme')
+        except KeyError:
+            scheme = 'http'
+            cdn_https = app.config['CDN_HTTPS']
+            if cdn_https is True or (cdn_https is None and request.is_secure):
+                scheme = 'https'
 
         static_folder = app.static_folder
-        if request.blueprint is not None and app.blueprints[request.blueprint].has_static_folder:
+        if (request.blueprint is not None and
+                request.blueprint in app.blueprints and
+                app.blueprints[request.blueprint].has_static_folder):
             static_folder = app.blueprints[request.blueprint].static_folder
 
         urls = app.url_map.bind(app.config['CDN_DOMAIN'], url_scheme=scheme)
@@ -69,10 +83,11 @@ class CDN(object):
             self.init_app(app)
 
     def init_app(self, app):
-        defaults = [('CDN_DOMAIN', None),
-                    ('CDN_DEBUG', False),
+        defaults = [('CDN_DEBUG', app.debug),
+                    ('CDN_DOMAIN', None),
                     ('CDN_HTTPS', None),
-                    ('CDN_TIMESTAMP', True)]
+                    ('CDN_TIMESTAMP', True),
+                    ('CDN_ENDPOINTS', ['static'])]
 
         for k, v in defaults:
             app.config.setdefault(k, v)
